@@ -161,7 +161,7 @@ fn setup_logging(connection: &Connection) {
     expect_reply(connection, CRTP_SETTINGS_CHANNEL, CRTP_CMD_START_LOGGING);
 }
 
-fn get_roll_pitch_data(connection: &Connection) -> (f32, f32) {
+fn get_rotation_data(connection: &Connection) -> (f32, f32) {
     loop {
         let received = match connection.recv_packet_timeout(std::time::Duration::from_secs(10)) {
             Ok(v) => v,
@@ -225,7 +225,7 @@ fn main() {
             .unwrap();
 
         loop {
-            let (roll, pitch) = get_roll_pitch_data(&connection);
+            let (roll, pitch) = get_rotation_data(&connection);
 
             device.send(X, roll as i32).unwrap();
             device.send(Y, pitch as i32).unwrap();
