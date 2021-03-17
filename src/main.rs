@@ -8,6 +8,7 @@ use uinput::event::controller::Mouse::Left;
 use uinput::event::relative::Position::{X, Y};
 use uinput::event::relative::Relative::Position;
 use uinput::event::Event::{Controller, Relative};
+use uinput::{Device, Error};
 
 const CRAZYMOUSE_ID: u8 = 0x42;
 
@@ -193,6 +194,15 @@ fn get_rotation_data(connection: &Connection) -> (f32, f32) {
     }
 }
 
+fn uinput_init() -> Result<Device, Error> {
+    uinput::default()?
+        .name("test")?
+        .event(Controller(Mouse(Left)))?
+        .event(Relative(Position(X)))?
+        .event(Relative(Position(Y)))?
+        .create()
+}
+
 fn main() {
     let context = LinkContext::new();
     let address = [0x00, 0xde, 0xad, 0xbe, 0xef];
@@ -211,18 +221,13 @@ fn main() {
 
         setup_logging(&connection);
 
-        let mut device = uinput::default()
-            .unwrap()
-            .name("test")
-            .unwrap()
-            .event(Controller(Mouse(Left)))
-            .unwrap() // It's necessary to enable any mouse button. Otherwise Relative events would not work.
-            .event(Relative(Position(X)))
-            .unwrap()
-            .event(Relative(Position(Y)))
-            .unwrap()
-            .create()
-            .unwrap();
+        let mut device = match uinput_init() {
+            Ok(d) => d,
+            Err(e) => {
+                eprintln!("uinput: {}", e);
+                std::process::exit(1);
+            }
+        };
 
         loop {
             let (roll, pitch) = get_rotation_data(&connection);
