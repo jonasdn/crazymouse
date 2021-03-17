@@ -206,9 +206,7 @@ fn uinput_init() -> Result<Device, Error> {
 fn uinput_update_mouse(device: &mut Device, x_delta: f32, y_delta: f32) -> Result<(), Error> {
     device.send(X, x_delta as i32)?;
     device.send(Y, y_delta as i32)?;
-    device.synchronize()?;
-
-    Ok(())
+    device.synchronize()
 }
 
 fn main() {
