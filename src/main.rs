@@ -30,7 +30,9 @@ const CRTP_LOGGING_PERIOD_MS: u8 = 10;
 //
 fn expect_reply(connection: &Connection, channel: u8, cmd: u8) -> Packet {
     loop {
-        let received = match connection.recv_packet_timeout(std::time::Duration::from_secs(10)) {
+        let received = match connection
+            .recv_packet_timeout(std::time::Duration::from_secs(10))
+        {
             Ok(v) => v,
             Err(_) => {
                 eprintln!("failed to setup logging");
@@ -91,7 +93,11 @@ fn send_packet(connection: &Connection, packet: Packet) {
 // Use the CRTP protocol to get the list of all varialbes and their coresponding ids
 //
 fn fetch_toc(connection: &Connection) -> HashMap<String, u16> {
-    let packet = Packet::new(CRTP_LOGGING_PORT, CRTP_TOC_CHANNEL, vec![CRTP_CMD_TOC_INFO]);
+    let packet = Packet::new(
+        CRTP_LOGGING_PORT,
+        CRTP_TOC_CHANNEL,
+        vec![CRTP_CMD_TOC_INFO],
+    );
     send_packet(connection, packet);
     let packet = expect_reply(connection, CRTP_TOC_CHANNEL, CRTP_CMD_TOC_INFO);
     let data = packet.get_data();
@@ -109,7 +115,8 @@ fn fetch_toc(connection: &Connection) -> HashMap<String, u16> {
             ],
         );
         send_packet(connection, packet);
-        let packet = expect_reply(connection, CRTP_TOC_CHANNEL, CRTP_CMD_TOC_ITEM);
+        let packet =
+            expect_reply(connection, CRTP_TOC_CHANNEL, CRTP_CMD_TOC_ITEM);
         //
         // Pack the u16 ident in two bytes of the packet, little-endian style.
         //
@@ -164,7 +171,9 @@ fn setup_logging(connection: &Connection) {
 
 fn get_rotation_data(connection: &Connection) -> (f32, f32) {
     loop {
-        let received = match connection.recv_packet_timeout(std::time::Duration::from_secs(10)) {
+        let received = match connection
+            .recv_packet_timeout(std::time::Duration::from_secs(10))
+        {
             Ok(v) => v,
             Err(_) => {
                 eprintln!("timeout waiting for logdata");
@@ -203,7 +212,11 @@ fn uinput_init() -> Result<Device, Error> {
         .create()
 }
 
-fn uinput_update_mouse(device: &mut Device, x_delta: f32, y_delta: f32) -> Result<(), Error> {
+fn uinput_update_mouse(
+    device: &mut Device,
+    x_delta: f32,
+    y_delta: f32,
+) -> Result<(), Error> {
     device.send(X, x_delta as i32)?;
     device.send(Y, y_delta as i32)?;
     device.synchronize()
