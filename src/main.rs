@@ -16,7 +16,7 @@ fn main() {
             }
         };
 
-        println!("Opening link for Crazyflie at {}", uri);
+        println!("* Opening link for Crazyflie at {}", uri);
         let connection = match context.open_link(uri) {
             Ok(connection) => connection,
             Err(e) => {
@@ -25,11 +25,7 @@ fn main() {
             }
         };
 
-        //
-        // Initiate logging rotation data over the Crazy Real Time Protocol
-        //
-        crtp::setup_logging(&connection);
-
+        println!("* Initiating user input interface");
         let mut device = match mouse::init() {
             Ok(d) => d,
             Err(e) => {
@@ -37,6 +33,12 @@ fn main() {
                 std::process::exit(1);
             }
         };
+
+        //
+        // Initiate logging rotation data over the Crazy Real Time Protocol
+        //
+        crtp::setup_logging(&connection);
+        println!("* Receiving logging data from Crazyflie, you can now use it as a mouse");
 
         loop {
             let (roll, pitch) = crtp::get_rotation_data(&connection);
