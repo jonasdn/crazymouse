@@ -203,6 +203,14 @@ fn uinput_init() -> Result<Device, Error> {
         .create()
 }
 
+fn uinput_update_mouse(device: &mut Device, x_delta: f32, y_delta: f32) -> Result<(), Error> {
+    device.send(X, x_delta as i32)?;
+    device.send(Y, y_delta as i32)?;
+    device.synchronize()?;
+
+    Ok(())
+}
+
 fn main() {
     let context = LinkContext::new();
     let address = [0x00, 0xde, 0xad, 0xbe, 0xef];
@@ -232,9 +240,10 @@ fn main() {
         loop {
             let (roll, pitch) = get_rotation_data(&connection);
 
-            device.send(X, roll as i32).unwrap();
-            device.send(Y, pitch as i32).unwrap();
-            device.synchronize().unwrap();
+            if let Err(e) = uinput_update_mouse(&mut device, roll, pitch) {
+                eprintln!("uinput: {}", e);
+                std::process::exit(1);
+            }
         }
     }
 }
