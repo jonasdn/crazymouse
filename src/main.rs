@@ -216,13 +216,19 @@ fn main() {
     let address = [0x00, 0xde, 0xad, 0xbe, 0xef];
 
     if let Ok(found) = context.scan(address) {
-        let uri = found.first().unwrap();
+        let uri = match found.first() {
+            Some(uri) => uri,
+            None => {
+                eprintln!("error: no Crazyflie found");
+                std::process::exit(1);
+            }
+        };
 
         println!("Opening link for Crazyflie at {}", uri);
         let connection = match context.open_link(uri) {
             Ok(connection) => connection,
             Err(e) => {
-                eprintln!("Error: {}", e);
+                eprintln!("error: {}", e);
                 std::process::exit(1);
             }
         };
