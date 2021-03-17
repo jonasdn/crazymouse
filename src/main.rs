@@ -79,7 +79,7 @@ fn parse_name(data: &[u8]) -> String {
 //
 fn send_packet(connection: &Connection, packet: Packet) {
     match connection.send_packet(packet) {
-        Ok(_) => {},
+        Ok(_) => {}
         Err(_) => {
             eprintln!("failed to send packet over radio");
             std::process::exit(1);
