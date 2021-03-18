@@ -3,6 +3,8 @@ use crazyflie_link::{Connection, Packet};
 use byteorder::{ByteOrder, LittleEndian};
 use std::collections::HashMap;
 
+use anyhow::{bail, Result};
+
 const CRAZYMOUSE_ID: u8 = 0x42;
 
 const CRTP_LOGGING_PORT: u8 = 0x5;
@@ -21,21 +23,13 @@ const CRTP_LOGGING_PERIOD_MS: u8 = 10;
 //
 // Receive a packet of certain type, or bail out.
 //
-fn expect_reply(connection: &Connection, channel: u8, cmd: u8) -> Packet {
+fn expect(con: &Connection, channel: u8, cmd: u8) -> Result<Packet> {
     loop {
-        let received = match connection
-            .recv_packet_timeout(std::time::Duration::from_secs(10))
-        {
-            Ok(v) => v,
-            Err(_) => {
-                eprintln!("failed to setup logging");
-                std::process::exit(1);
-            }
-        };
-
+        let timeout = std::time::Duration::from_secs(10);
+        let received = con.recv_packet_timeout(timeout)?;
         let data = received.get_data();
         if received.get_channel() == channel && data[0] == cmd {
-            return received;
+            return Ok(received);
         } else {
             continue;
         }
@@ -72,27 +66,22 @@ fn parse_name(data: &[u8]) -> String {
 //
 // Send packet or die.
 //
-fn send_packet(connection: &Connection, packet: Packet) {
-    match connection.send_packet(packet) {
-        Ok(_) => {}
-        Err(_) => {
-            eprintln!("failed to send packet over radio");
-            std::process::exit(1);
-        }
-    }
+fn send_packet(con: &Connection, packet: Packet) -> Result<()> {
+    con.send_packet(packet)?;
+    Ok(())
 }
 
 //
 // Use the CRTP protocol to get the list of all varialbes and their coresponding ids
 //
-fn fetch_toc(connection: &Connection) -> HashMap<String, u16> {
+fn fetch_toc(con: &Connection) -> Result<HashMap<String, u16>> {
     let packet = Packet::new(
         CRTP_LOGGING_PORT,
         CRTP_TOC_CHANNEL,
         vec![CRTP_CMD_TOC_INFO],
     );
-    send_packet(connection, packet);
-    let packet = expect_reply(connection, CRTP_TOC_CHANNEL, CRTP_CMD_TOC_INFO);
+    send_packet(con, packet)?;
+    let packet = expect(con, CRTP_TOC_CHANNEL, CRTP_CMD_TOC_INFO)?;
     let data = packet.get_data();
     let items = (data[2] as u16) << 8 | data[1] as u16;
 
@@ -107,9 +96,8 @@ fn fetch_toc(connection: &Connection) -> HashMap<String, u16> {
                 ((element >> 8) & 0xff) as u8,
             ],
         );
-        send_packet(connection, packet);
-        let packet =
-            expect_reply(connection, CRTP_TOC_CHANNEL, CRTP_CMD_TOC_ITEM);
+        send_packet(con, packet)?;
+        let packet = expect(con, CRTP_TOC_CHANNEL, CRTP_CMD_TOC_ITEM)?;
         //
         // Pack the u16 ident in two bytes of the packet, little-endian style.
         //
@@ -118,11 +106,11 @@ fn fetch_toc(connection: &Connection) -> HashMap<String, u16> {
         let name = parse_name(&data[3..]);
         toc.insert(name, ident);
     }
-    toc
+    Ok(toc)
 }
 
-pub fn setup_logging(connection: &Connection) {
-    let toc = fetch_toc(connection);
+pub fn setup_logging(con: &Connection) -> Result<()> {
+    let toc = fetch_toc(con)?;
 
     let mut packet = Packet::new(
         CRTP_LOGGING_PORT,
@@ -139,15 +127,14 @@ pub fn setup_logging(connection: &Connection) {
         let id = match toc.get(&s) {
             Some(id) => id,
             None => {
-                eprintln!("variables not found!");
-                std::process::exit(1);
+                bail!("variables not found!");
             }
         };
         let mut v = vec![0x07, (id & 0xff) as u8, ((id >> 8) & 0xff) as u8];
         packet.append_data(&mut v);
     }
-    send_packet(connection, packet);
-    expect_reply(connection, CRTP_SETTINGS_CHANNEL, CRTP_CMD_CREATE_BLOCK);
+    send_packet(con, packet)?;
+    expect(con, CRTP_SETTINGS_CHANNEL, CRTP_CMD_CREATE_BLOCK)?;
 
     let packet = Packet::new(
         CRTP_LOGGING_PORT,
@@ -158,21 +145,15 @@ pub fn setup_logging(connection: &Connection) {
             CRTP_LOGGING_PERIOD_MS / 10,
         ],
     );
-    send_packet(connection, packet);
-    expect_reply(connection, CRTP_SETTINGS_CHANNEL, CRTP_CMD_START_LOGGING);
+    send_packet(con, packet)?;
+    expect(con, CRTP_SETTINGS_CHANNEL, CRTP_CMD_START_LOGGING)?;
+    Ok(())
 }
 
-pub fn get_rotation_data(connection: &Connection) -> (f32, f32) {
+pub fn get_rotation_data(con: &Connection) -> Result<(f32, f32)> {
     loop {
-        let received = match connection
-            .recv_packet_timeout(std::time::Duration::from_secs(10))
-        {
-            Ok(v) => v,
-            Err(_) => {
-                eprintln!("timeout waiting for logdata");
-                std::process::exit(1);
-            }
-        };
+        let timeout = std::time::Duration::from_secs(10);
+        let received = con.recv_packet_timeout(timeout)?;
 
         if received.get_channel() != CRTP_LOGDATA_CHANNEL {
             continue;
@@ -185,13 +166,12 @@ pub fn get_rotation_data(connection: &Connection) -> (f32, f32) {
         }
 
         if data.len() != 12 {
-            eprintln!("invalid logdata length");
-            std::process::exit(1);
+            bail!("invalid logdata length");
         }
 
-        return (
+        return Ok((
             LittleEndian::read_f32(&data[4..8]),
             LittleEndian::read_f32(&data[8..12]),
-        );
+        ));
     }
 }
