@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0"
+hex = "0.4.3"
 uinput = { git = "https://github.com/meh/rust-uinput.git" }
 byteorder = "1.2.2"
 crazyflie-link = { path = "../crazyflie-link-rs/crazyflie-link" }

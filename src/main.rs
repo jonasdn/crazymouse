@@ -2,11 +2,25 @@ mod crtp;
 mod mouse;
 
 use crazyflie_link::LinkContext;
+use hex::FromHex;
+use std::env;
 
 fn main() {
-    let context = LinkContext::new();
-    let address = [0x00, 0xde, 0xad, 0xbe, 0xef];
+    let args: Vec<String> = env::args().collect();
+    let mut address = [0xe7, 0xe7, 0xe7, 0xe7, 0xe7];
 
+    if args.len() > 1 {
+        address = match <[u8; 5]>::from_hex(format!("{:0>10}", args[1])) {
+            Ok(s) => s,
+            Err(e) => {
+                eprintln!("error: failed to parse address {}", e);
+                std::process::exit(1);
+            }
+        };
+    }
+
+    println!("* Scanning for Crazyflie quad at address {:X?}", address);
+    let context = LinkContext::new();
     if let Ok(found) = context.scan(address) {
         let uri = match found.first() {
             Some(uri) => uri,
@@ -41,7 +55,9 @@ fn main() {
             eprintln!("logging: {}", e);
             std::process::exit(1);
         }
-        println!("* Receiving logging data from Crazyflie, you can now use it as a mouse");
+        println!(
+            "* Receiving data from Crazyflie, you can now use it as a mouse"
+        );
 
         loop {
             let (roll, pitch) = match crtp::get_rotation_data(&con) {
