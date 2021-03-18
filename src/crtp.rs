@@ -64,14 +64,6 @@ fn parse_name(data: &[u8]) -> String {
 }
 
 //
-// Send packet or die.
-//
-fn send_packet(con: &Connection, packet: Packet) -> Result<()> {
-    con.send_packet(packet)?;
-    Ok(())
-}
-
-//
 // Use the CRTP protocol to get the list of all varialbes and their coresponding ids
 //
 fn fetch_toc(con: &Connection) -> Result<HashMap<String, u16>> {
@@ -80,7 +72,7 @@ fn fetch_toc(con: &Connection) -> Result<HashMap<String, u16>> {
         CRTP_TOC_CHANNEL,
         vec![CRTP_CMD_TOC_INFO],
     );
-    send_packet(con, packet)?;
+    con.send_packet(packet)?;
     let packet = expect(con, CRTP_TOC_CHANNEL, CRTP_CMD_TOC_INFO)?;
     let data = packet.get_data();
     let items = (data[2] as u16) << 8 | data[1] as u16;
@@ -96,7 +88,7 @@ fn fetch_toc(con: &Connection) -> Result<HashMap<String, u16>> {
                 ((element >> 8) & 0xff) as u8,
             ],
         );
-        send_packet(con, packet)?;
+        con.send_packet(packet)?;
         let packet = expect(con, CRTP_TOC_CHANNEL, CRTP_CMD_TOC_ITEM)?;
         //
         // Pack the u16 ident in two bytes of the packet, little-endian style.
@@ -133,7 +125,7 @@ pub fn setup_logging(con: &Connection) -> Result<()> {
         let mut v = vec![0x07, (id & 0xff) as u8, ((id >> 8) & 0xff) as u8];
         packet.append_data(&mut v);
     }
-    send_packet(con, packet)?;
+    con.send_packet(packet)?;
     expect(con, CRTP_SETTINGS_CHANNEL, CRTP_CMD_CREATE_BLOCK)?;
 
     let packet = Packet::new(
@@ -145,7 +137,7 @@ pub fn setup_logging(con: &Connection) -> Result<()> {
             CRTP_LOGGING_PERIOD_MS / 10,
         ],
     );
-    send_packet(con, packet)?;
+    con.send_packet(packet)?;
     expect(con, CRTP_SETTINGS_CHANNEL, CRTP_CMD_START_LOGGING)?;
     Ok(())
 }
