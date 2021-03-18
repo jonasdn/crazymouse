@@ -3,7 +3,7 @@ use crazyflie_link::{Connection, Packet};
 use byteorder::{ByteOrder, LittleEndian};
 use std::collections::HashMap;
 
-use anyhow::{bail, Result};
+use eyre::{bail, Result};
 
 const CRAZYMOUSE_ID: u8 = 0x42;
 
