@@ -14,12 +14,8 @@ pub fn init() -> Result<Device, Error> {
         .create()
 }
 
-pub fn update(
-    device: &mut Device,
-    x_delta: f32,
-    y_delta: f32,
-) -> Result<(), Error> {
-    device.send(X, x_delta as i32)?;
-    device.send(Y, y_delta as i32)?;
+pub fn update(device: &mut Device, x: f32, y: f32) -> Result<(), Error> {
+    device.send(X, x as i32)?;
+    device.send(Y, y as i32)?;
     device.synchronize()
 }
